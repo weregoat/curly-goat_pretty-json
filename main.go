@@ -23,7 +23,7 @@ func main() {
 	// Big assumption in general, not so big in the context this script was
 	// written for.
 	i := bytes.IndexByte(b, byte('{'))
-	if i > 0 {
+	if i >= 0 {
 		fluff := b[:i]
 		payload := b[i:]
 		fmt.Fprintf(os.Stdout, "%s", fluff)
