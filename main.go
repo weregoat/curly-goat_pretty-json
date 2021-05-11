@@ -5,36 +5,44 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
+	"strings"
 )
 
 func main() {
-	r := bufio.NewReader(os.Stdin)
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var out bytes.Buffer
-
-	// Find the first '{' that we assume mark the beginning of the JSON payload
-	// Big assumption in general, not so big in the context this script was
-	// written for.
-	i := bytes.IndexByte(b, byte('{'))
-	if i >= 0 {
-		fluff := b[:i]
-		payload := b[i:]
-		fmt.Fprintf(os.Stdout, "%s", fluff)
-		err = json.Indent(&out, payload, "", "  ")
-		if err != nil {
-			log.Fatal(err)
+	scanner := bufio.NewScanner(os.Stdin)
+	sb := strings.Builder{}
+	body := false // False until we find something we assume is the JSON body
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) > 0 {
+			// If the line begins with "{" or "[", we guess is the start JSON body
+			if line[:1] == "{" || line[:1] == "[" {
+				body = true
+			}
 		}
-		out.WriteTo(os.Stdout)
-		fmt.Fprintln(os.Stdout, "")
-	} else {
-		fmt.Fprintf(os.Stdout, "%s", b)
+		if body {
+			// JSON body is written into a string builder to be later processed
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		} else {
+			// Anything before the body is printed out as is.
+			fmt.Println(line)
+		}
 	}
-
+	var out bytes.Buffer
+	payload := sb.String()
+	if len(payload) > 0 {
+		// Prettify the assumed JSON body
+		err := json.Indent(&out, []byte(payload), "", "  ")
+		if err != nil {
+			// Maybe it cannot be parsed, maybe something else... Print it out as we read it
+			fmt.Println(payload)
+			// Print out the error at the end.
+			fmt.Println("---")
+			fmt.Print(err)
+			os.Exit(1)
+		}
+		fmt.Println(out.String())
+	}
 }
