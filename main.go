@@ -4,32 +4,44 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
 
+const endLine = '\n'
+
 func main() {
-	scanner := bufio.NewScanner(os.Stdin)
+	reader := bufio.NewReader(os.Stdin)
 	sb := strings.Builder{}
-	body := false // False until we find something we assume is the JSON body
-	for scanner.Scan() {
-		line := scanner.Text()
-		if len(line) > 0 {
+	for {
+		body := false // False until we find something we assume is the JSON body
+		line, err := reader.ReadString(endLine)
+
+		if line != "" {
 			// If the line begins with "{" or "[", we guess is the start JSON body
-			if line[:1] == "{" || line[:1] == "[" {
+			if strings.HasPrefix(line, "{") || strings.HasPrefix(line, "[") {
 				body = true
 			}
 		}
 		if body {
-			// JSON body is written into a string builder to be later processed
-			sb.WriteString(line)
-			sb.WriteString("\n")
+			// JSON body is written into a string builder (without end-line) to be later processed
+			sb.WriteString(strings.TrimSpace(line))
 		} else {
-			// Anything before the body is printed out as is.
-			fmt.Println(line)
+			// Anything before that is not JSON body is printed out as is.
+			fmt.Print(line)
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) { // No more lines
+				break
+			} else {
+				errorExit(err)
+			}
 		}
 	}
+
 	var out bytes.Buffer
 	payload := sb.String()
 	if len(payload) > 0 {
@@ -39,10 +51,14 @@ func main() {
 			// Maybe it cannot be parsed, maybe something else... Print it out as we read it
 			fmt.Println(payload)
 			// Print out the error at the end.
-			fmt.Println("---")
-			fmt.Print(err)
-			os.Exit(1)
+			errorExit(err)
 		}
 		fmt.Println(out.String())
 	}
+}
+
+func errorExit(err error) {
+	fmt.Println("---")
+	fmt.Print(err)
+	os.Exit(1)
 }
