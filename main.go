@@ -20,11 +20,9 @@ func main() {
 		body := false // False until we find something we assume is the JSON body
 		line, err := reader.ReadString(endLine)
 
-		line = strings.TrimSpace(line)
-
 		if line != "" {
 			// If the line begins with "{" or "[", we guess is the start JSON body
-			if strings.HasPrefix(line, "{") || strings.HasPrefix(line, "[") {
+			if strings.HasPrefix(strings.TrimSpace(line), "{") || strings.HasPrefix(strings.TrimSpace(line), "[") {
 				body = true
 			}
 		}
