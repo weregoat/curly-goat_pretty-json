@@ -27,6 +27,10 @@ func main() {
 			}
 		}
 		if body {
+			// Remove escaping
+			line = strings.ReplaceAll(line, `\"`, `"`)
+			line = strings.ReplaceAll(line, `"{`, `{`)
+			line = strings.ReplaceAll(line, `}"`, `}`)
 			// JSON body is written into a string builder (without end-line) to be later processed
 			sb.WriteString(strings.TrimSpace(line))
 		} else {
